@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>demo</title>
+	<style>
+		canvas {
+			border: 1px solid #000;
+		}
+	</style>
+</head>
+<body>
+	<canvas id="rabbit" width="600" height="400"></canvas>
+	<script>
+		function toAngle(radian){
+			return 180 * radian / Math.PI;
+		}
+		function toRadian(angle){
+			return Math.PI * angle / 180;
+		}
+		var canvas = document.getElementById('rabbit'),
+		ctx = canvas.getContext('2d');
+
+		function Rambler(config) {
+//			如果获取到小人对象或者没有图片路径，不能控制她行走
+			if(!config.context || !config.img){
+				console.warn('参数异常');
+				return this;
+			}
+			this.context = config.context;
+			this.img = new Image();
+			this.img.src = config.img;
+			this.x = config.x || 0;
+			this.y = config.y || 0;
+			this.direction = config.direction;
+			this.frame = config.frame || 0;
+			this.currentFrame = config.currentFrame || 0;
+			this.speed = config.speed || 5;
+//			从图片中扣除第一个小人
+			this.width = 40;
+			this.height = 65;
+            this.fps = config.fps || 6.25;
+        }
+
+        Rambler.prototype = {
+		    constructor: Rambler,
+			draw: function () {
+                var ctx = this.context;
+//                clearRect(x, y, width, height)删除一个画布的矩形区域
+//				1. 先清除画布
+                ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+//                drawImage(image, sourceX, sourceY, sourceWidth, sourceHeight, destX, destY, destWidth, destHeight)
+//				    image所要绘制的图像。
+//					这必须是表示 <img> 标记或者屏幕外图像的 Image 对象，或者是 Canvas 元素。
+//					sourceX, sourceY	图像将要被绘制的区域的左上角。这些整数参数用图像像素来度量。
+//					sourceWidth, sourceHeight	图像所要绘制区域的大小，用图像像素表示。
+//					destX, destY	所要绘制的图像区域的左上角的画布坐标。
+//					destWidth, destHeight	图像区域所要绘制的画布大小。
+//				2. 绘制每一帧的图像
+				ctx.drawImage(this.img, this.currentFrame * this.width, this.direction * this.height,
+					this.width, this.height, this.x, this.y, this.width, this.height);
+
+            },
+//			想让小人动起来，就要改变currentFrame当前帧
+            updateFrame: function () {
+                var canvas = this.context.canvas;
+//		        一共只有4帧 动起来的时候是 0 1 2 3；不会超过4
+                this.currentFrame++;
+                this.currentFrame %= 4;
+//				当走出区域后，再从对面走出来的时候，添加一个缓冲时间
+				var wait = 8;
+				switch(this.direction){
+//				    向下走
+					case 0:
+                        this.y += this.speed;
+					    if(this.y >= canvas.height){
+//							当小人在向下走的时候，也就是y坐标动的时候，判断当小人走出画布下面区域后，从画布上面再走回来，
+// 							这样实现使小人一直走动在画布当中
+							this.y = -this.height - wait;
+						}
+						break;
+					case 1:
+					    this.x -= this.speed;
+					    if(this.x <= -this.width){
+							this.x = canvas.width + wait;
+						}
+						break;
+					case 2:
+					    this.x += this.speed;
+					    if(this.x >= canvas.width){
+					        this.x = -this.width - wait;
+						}
+						break;
+					case 3:
+					    this.y -= this.speed;
+					    if(this.y <= -this.height){
+					        this.y = canvas.height + wait;
+						}
+						break;
+				}
+            },
+//			监听键盘keydown时间，通过键盘方向键改变小人行走方向
+            bind: function() {
+                var selt = this;
+                window.document.addEventListener('keydown', function(e) {
+                    var keyCode = e.keyCode;
+                    console.log(keyCode);
+                    switch(keyCode){
+                        case 38: // up
+                        case 87:
+                            selt.direction = 3;
+                            break;
+                        case 40: // down
+                        case 83:
+                            selt.direction = 0
+                            break;
+                        case 37: // left
+                        case 65:
+                            selt.direction = 1;
+                            break;
+                        case 39: // right
+                        case 68:
+                            selt.direction = 2;
+                            break;
+                    }
+                });
+            },
+//			当图片加载，调用各方法
+            render: function() {
+                var self = this;
+                this.img.addEventListener('load', function() {
+                    var render = function() {
+                        self.bind();
+                        self.draw();
+                        self.updateFrame();
+                    };
+                    window.setInterval(render, 1000 / self.fps);
+                });
+            }
+		}
+
+//		创建一个小人对象
+		var r = new Rambler({
+//			手动设置一个上下文
+			context: ctx,
+//			小人图片路径
+			img: './static/img/rabbit.png',
+//			初始坐标值
+			x: 0,
+			y: 0,
+//			用来标记小人行走的方向:0表示向下，1表示向左，2表示向右，3表示向上
+//			初始方向
+			direction: 0,
+//			根据小人图片，小人行走起来需要四个帧
+			frame: 4,
+//			当前帧
+			currentFrame: 0,
+//			小人行走的速度
+            speed: 2,
+            fps: 6.25
+		})
+        r.render();
+	</script>
+</body>
+</html>
